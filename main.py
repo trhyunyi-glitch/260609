@@ -1,8 +1,14 @@
 import streamlit as st
-from fpdf import FPDF
 import requests
 import tempfile
 import os
+
+# FPDF 임포트 에러 방지를 위한 안전한 로드 패턴
+try:
+    from fpdf import FPDF
+    FPDF_AVAILABLE = True
+except ModuleNotFoundError:
+    FPDF_AVAILABLE = False
 
 # Page Configuration
 st.set_page_config(
@@ -55,7 +61,7 @@ MBTI_DATA = {
         "strengths": ["깊은 통찰력", "강한 신념과 이상주의", "뛰어난 공감 능력", "독창적인 언어적 표현력"],
         "careers": [
             {"name": "상담 심리사 / 치료사", "reason": "타인의 내면적 아픔을 깊이 이해하고 통찰력 있는 해결책을 제시합니다."},
-            {"name": "작가 / 소설가", "reason": "자신의 깊은 가치관과 이상향을 글이라는 매체를 통해 세상에 전합니다."},
+            {"name": "작가 / 소설가", "reason": "자신의 깊은 가치관และ 이상향을 글이라는 매체를 통해 세상에 전합니다."},
             {"name": "환경 / 인권 운동가", "reason": "인류와 환경을 위한 숭고한 대의를 위해 지속적이고 헌신적으로 활동합니다."},
             {"name": "진로 커리어 코치", "reason": "사람들의 잠재된 가능성을 발견하고 영감을 주어 올바른 길로 안내합니다."}
         ]
@@ -172,20 +178,6 @@ MBTI_DATA = {
             {"name": "스타트업 초기 기획자", "reason": "새로운 비즈니스 컨셉을 유연하게 발굴하고 가치를 창조합니다."}
         ]
     },
-    "ENFP": {
-        "emoji": "🌟🎈🌻💬",
-        "title": "재기발랄한 활동가 (The Campaigner)",
-        "desc": "자유로운 영혼의 소유자입니다. 활기차고 다정다감하며 타인과 정서적으로 유대하는 능력이 뛰어나고 아이디어가 넘칩니다.",
-        "bg_color": "#FAF5FF",
-        "accent_color": "#9333EA",
-        "strengths": ["무한한 아이디어 생성", "강한 친화력과 공감", "열정적인 동기부여가", "열린 마음"],
-        "careers": [
-            {"name": "크리에이티브 디렉터", "reason": "브랜드나 캠페인의 참신하고 감성적인 아이디어를 구상하고 지휘합니다."},
-            {"name": "카피라이터 / 마케터", "reason": "사람들의 마음을 움직이는 톡톡 튀는 문구와 매력적인 스토리를 개발합니다."},
-            {"name": "상담 교사 / 청소년 지도사", "reason": "학습자들에게 영감과 따뜻한 공감을 건네며 자아실현을 돕습니다."},
-            {"name": "스타트업 초기 기획자", "reason": "새로운 비즈니스 컨셉을 유연하게 발굴하고 가치를 창조합니다."}
-        ]
-    },
     "ENTP": {
         "emoji": "💡🧩🎙️💣",
         "title": "뜨거운 논쟁을 즐기는 변론가 (The Debater)",
@@ -261,112 +253,116 @@ MBTI_DATA = {
 # -------------------------------------------------------------------------
 # PDF GENERATION HELPER
 # -------------------------------------------------------------------------
-class MBTIPDF(FPDF):
-    """
-    한글 나눔바른고딕 폰트 적용 및 MBTI 진로 탐색 결과를 디자인한 PDF 생성기 클래스
-    """
-    def __init__(self, mbti_type, mbti_info):
-        super().__init__()
-        self.mbti_type = mbti_type
-        self.mbti_info = mbti_info
-        
-        # NanumBarunGothic 폰트 다운로드 및 등록
-        font_url = "https://github.com/google/fonts/raw/main/ofl/nanumbarungothic/NanumBarunGothic.ttf"
-        font_bold_url = "https://github.com/google/fonts/raw/main/ofl/nanumbarungothic/NanumBarunGothicBold.ttf"
-        
-        try:
-            self.regular_font_path = self._download_font(font_url, "NanumBarunGothic.ttf")
-            self.bold_font_path = self._download_font(font_bold_url, "NanumBarunGothicBold.ttf")
+if FPDF_AVAILABLE:
+    class MBTIPDF(FPDF):
+        """
+        한글 나눔바른고딕 폰트 적용 및 MBTI 진로 탐색 결과를 디자인한 PDF 생성기 클래스
+        """
+        def __init__(self, mbti_type, mbti_info):
+            super().__init__()
+            self.mbti_type = mbti_type
+            self.mbti_info = mbti_info
             
-            self.add_font("Nanum", "", self.regular_font_path)
-            self.add_font("Nanum", "B", self.bold_font_path)
-        except Exception as e:
-            # 폰트 다운로드 실패 시 폰트 미설정으로 동작 (이모지 및 영어는 헬베티카 기본 대체 유도)
-            st.warning("폰트를 불러오는 중 에러가 발생하여 PDF의 한글이 정상 출력되지 않을 수 있습니다.")
-            self.add_font("Nanum", "", "")
-            self.add_font("Nanum", "B", "")
+            # NanumBarunGothic 폰트 다운로드 및 등록
+            font_url = "https://github.com/google/fonts/raw/main/ofl/nanumbarungothic/NanumBarunGothic.ttf"
+            font_bold_url = "https://github.com/google/fonts/raw/main/ofl/nanumbarungothic/NanumBarunGothicBold.ttf"
+            
+            try:
+                self.regular_font_path = self._download_font(font_url, "NanumBarunGothic.ttf")
+                self.bold_font_path = self._download_font(font_bold_url, "NanumBarunGothicBold.ttf")
+                
+                self.add_font("Nanum", "", self.regular_font_path)
+                self.add_font("Nanum", "B", self.bold_font_path)
+            except Exception as e:
+                # 폰트 다운로드 실패 시 폰트 미설정으로 동작 (이모지 및 영어는 헬베티카 기본 대체 유도)
+                st.warning("폰트를 불러오는 중 에러가 발생하여 PDF의 한글이 정상 출력되지 않을 수 있습니다.")
+                self.add_font("Nanum", "", "")
+                self.add_font("Nanum", "B", "")
 
-    def _download_font(self, url, filename):
-        temp_dir = tempfile.gettempdir()
-        filepath = os.path.join(temp_dir, filename)
-        if not os.path.exists(filepath):
-            response = requests.get(url)
-            if response.status_code == 200:
-                with open(filepath, "wb") as f:
-                    f.write(response.content)
-            else:
-                raise Exception("Font download failed.")
-        return filepath
+        def _download_font(self, url, filename):
+            temp_dir = tempfile.gettempdir()
+            filepath = os.path.join(temp_dir, filename)
+            if not os.path.exists(filepath):
+                try:
+                    response = requests.get(url, timeout=10)
+                    if response.status_code == 200:
+                        with open(filepath, "wb") as f:
+                            f.write(response.content)
+                    else:
+                        raise Exception("Font download failed.")
+                except Exception as e:
+                    # 네트워크 타임아웃 예외 대응
+                    raise e
+            return filepath
 
-    def header(self):
-        # 상단 그라데이션 대신 심플한 탑바 디자인
-        self.set_fill_color(79, 70, 229) # 테마 포인트 컬러 (Indigo)
-        self.rect(0, 0, 210, 15, "F")
-        self.set_text_color(255, 255, 255)
-        self.set_font("Nanum", "B", 10)
-        self.cell(0, -2, "  🎓 MBTI Career Pathfinder - 미래를 설계하는 진로 교육", ln=1, align="L")
-        self.ln(12)
+        def header(self):
+            self.set_fill_color(79, 70, 229) # 테마 포인트 컬러 (Indigo)
+            self.rect(0, 0, 210, 15, "F")
+            self.set_text_color(255, 255, 255)
+            self.set_font("Nanum", "B", 10)
+            self.cell(0, -2, "  🎓 MBTI Career Pathfinder - 미래를 설계하는 진로 교육", ln=1, align="L")
+            self.ln(12)
 
-    def footer(self):
-        self.set_y(-20)
-        self.set_text_color(156, 163, 175)
-        self.set_font("Nanum", "", 9)
-        self.cell(0, 10, "※ 본 결과는 교육용 진로 탐색 도구로 제공되며, 실제 선택 시 적성 검사 등을 동반하는 것이 좋습니다.", align="C")
-        self.ln(5)
-        self.cell(0, 10, f"Page {self.page_no()}", align="C")
+        def footer(self):
+            self.set_y(-20)
+            self.set_text_color(156, 163, 175)
+            self.set_font("Nanum", "", 9)
+            self.cell(0, 10, "※ 본 결과는 교육용 진로 탐색 도구로 제공되며, 실제 선택 시 적성 검사 등을 동반하는 것이 좋습니다.", align="C")
+            self.ln(5)
+            self.cell(0, 10, f"Page {self.page_no()}", align="C")
 
-    def build_report(self):
-        self.add_page()
-        
-        # Title Section
-        self.set_text_color(17, 24, 39)
-        self.set_font("Nanum", "B", 24)
-        self.cell(0, 15, f"{self.mbti_type} 유형 맞춤형 진로 리포트", ln=1, align="L")
-        
-        # Subtitle
-        self.set_text_color(79, 70, 229)
-        self.set_font("Nanum", "B", 14)
-        self.cell(0, 10, f"★ {self.mbti_info['title']}", ln=1, align="L")
-        self.ln(5)
-
-        # Introduction Box
-        self.set_fill_color(243, 244, 246)
-        self.set_text_color(55, 65, 81)
-        self.set_font("Nanum", "", 10)
-        
-        intro_text = f"성향 요약:\n{self.mbti_info['desc']}"
-        self.multi_cell(0, 6, intro_text, border=1, fill=True, align="L")
-        self.ln(8)
-
-        # Core Strengths
-        self.set_text_color(17, 24, 39)
-        self.set_font("Nanum", "B", 13)
-        self.cell(0, 8, "■ 핵심 강점 (Core Strengths)", ln=1)
-        self.ln(2)
-        
-        self.set_font("Nanum", "", 10)
-        for strength in self.mbti_info['strengths']:
-            self.cell(5, 6, "-", ln=0)
-            self.cell(0, 6, strength, ln=1)
-        self.ln(8)
-
-        # Career Recommendations
-        self.set_text_color(17, 24, 39)
-        self.set_font("Nanum", "B", 13)
-        self.cell(0, 8, "■ 추천하는 어울리는 직업군 (Careers)", ln=1)
-        self.ln(3)
-
-        for career in self.mbti_info['careers']:
-            # Job Title
+        def build_report(self):
+            self.add_page()
+            
+            # Title Section
+            self.set_text_color(17, 24, 39)
+            self.set_font("Nanum", "B", 24)
+            self.cell(0, 15, f"{self.mbti_type} 유형 맞춤형 진로 리포트", ln=1, align="L")
+            
+            # Subtitle
             self.set_text_color(79, 70, 229)
-            self.set_font("Nanum", "B", 11)
-            self.cell(0, 6, f"▶ {career['name']}", ln=1)
-            
-            # Why it fits
-            self.set_text_color(75, 85, 99)
+            self.set_font("Nanum", "B", 14)
+            self.cell(0, 10, f"★ {self.mbti_info['title']}", ln=1, align="L")
+            self.ln(5)
+
+            # Introduction Box
+            self.set_fill_color(243, 244, 246)
+            self.set_text_color(55, 65, 81)
             self.set_font("Nanum", "", 10)
-            self.multi_cell(0, 5, f"추천 이유: {career['reason']}", align="L")
-            self.ln(4)
+            
+            intro_text = f"성향 요약:\n{self.mbti_info['desc']}"
+            self.multi_cell(0, 6, intro_text, border=1, fill=True, align="L")
+            self.ln(8)
+
+            # Core Strengths
+            self.set_text_color(17, 24, 39)
+            self.set_font("Nanum", "B", 13)
+            self.cell(0, 8, "■ 핵심 강점 (Core Strengths)", ln=1)
+            self.ln(2)
+            
+            self.set_font("Nanum", "", 10)
+            for strength in self.mbti_info['strengths']:
+                self.cell(5, 6, "-", ln=0)
+                self.cell(0, 6, strength, ln=1)
+            self.ln(8)
+
+            # Career Recommendations
+            self.set_text_color(17, 24, 39)
+            self.set_font("Nanum", "B", 13)
+            self.cell(0, 8, "■ 추천하는 어울리는 직업군 (Careers)", ln=1)
+            self.ln(3)
+
+            for career in self.mbti_info['careers']:
+                # Job Title
+                self.set_text_color(79, 70, 229)
+                self.set_font("Nanum", "B", 11)
+                self.cell(0, 6, f"▶ {career['name']}", ln=1)
+                
+                # Why it fits
+                self.set_text_color(75, 85, 99)
+                self.set_font("Nanum", "", 10)
+                self.multi_cell(0, 5, f"추천 이유: {career['reason']}", align="L")
+                self.ln(4)
 
 # -------------------------------------------------------------------------
 # UI STREAMLIT APP CODE
@@ -478,54 +474,59 @@ with col1:
 
 with col2:
     st.markdown("### 📥 맞춤 진로 보고서 발행")
-    st.info("입력된 사용자 정보와 선택된 MBTI 분석 내용을 바탕으로 공식 수료 및 탐색 리포트를 PDF 문서로 발행할 수 있습니다.")
     
-    # PDF Generation Trigger
-    if st.button("📄 PDF 진로 리포트 생성하기", use_container_width=True):
-        with st.spinner("전문 교육용 PDF를 생성하는 중입니다..."):
-            try:
-                pdf = MBTIPDF(mbti_selected, mbti_info)
-                
-                # 추가 정보 입력 시 상단 웰컴 블록 보강
-                if user_name or school_name:
-                    pdf.add_page()
-                    pdf.set_text_color(17, 24, 39)
-                    pdf.set_font("Nanum", "B", 20)
-                    pdf.cell(0, 15, "진로 적성 탐색 완료 증서", ln=1, align="C")
-                    pdf.ln(10)
+    if not FPDF_AVAILABLE:
+        st.warning("⚠️ `fpdf2` 패키지가 설치되지 않아 PDF 발행이 제한됩니다. 로컬 또는 클라우드 배포판에 `requirements.txt`를 생성하여 설치해 주세요.")
+        st.code("fpdf2\nrequests", language="text")
+    else:
+        st.info("입력된 사용자 정보와 선택된 MBTI 분석 내용을 바탕으로 공식 수료 및 탐색 리포트를 PDF 문서로 발행할 수 있습니다.")
+        
+        # PDF Generation Trigger
+        if st.button("📄 PDF 진로 리포트 생성하기", use_container_width=True):
+            with st.spinner("전문 교육용 PDF를 생성하는 중입니다..."):
+                try:
+                    pdf = MBTIPDF(mbti_selected, mbti_info)
                     
-                    pdf.set_font("Nanum", "", 12)
-                    pdf.cell(0, 10, f"소 속: {school_name if school_name else '(소속 없음)'}", ln=1, align="C")
-                    pdf.cell(0, 10, f"성 명: {user_name if user_name else '미지정 학습자'}", ln=1, align="C")
-                    pdf.cell(0, 10, f"진단 MBTI 유형: {mbti_selected}", ln=1, align="C")
+                    # 추가 정보 입력 시 상단 웰컴 블록 보강
+                    if user_name or school_name:
+                        pdf.add_page()
+                        pdf.set_text_color(17, 24, 39)
+                        pdf.set_font("Nanum", "B", 20)
+                        pdf.cell(0, 15, "진로 적성 탐색 완료 증서", ln=1, align="C")
+                        pdf.ln(10)
+                        
+                        pdf.set_font("Nanum", "", 12)
+                        pdf.cell(0, 10, f"소 속: {school_name if school_name else '(소속 없음)'}", ln=1, align="C")
+                        pdf.cell(0, 10, f"성 명: {user_name if user_name else '미지정 학습자'}", ln=1, align="C")
+                        pdf.cell(0, 10, f"진단 MBTI 유형: {mbti_selected}", ln=1, align="C")
+                        
+                        pdf.ln(15)
+                        pdf.multi_cell(0, 7, 
+                            "위 사람은 자신의 성격 유형(MBTI) 분석을 성실히 이행하고, "
+                            "스스로의 강점과 이에 맞는 어울리는 직업 세계를 면밀히 탐색하여 "
+                            "미래 지향적 자기 주도 진로 역량을 키웠음을 확인합니다.", 
+                            align="C"
+                        )
+                        pdf.ln(20)
+                        pdf.cell(0, 10, "MBTI Career Pathfinder 진로교육원", ln=1, align="C")
+                        
+                    # Main Report page
+                    pdf.build_report()
                     
-                    pdf.ln(15)
-                    pdf.multi_cell(0, 7, 
-                        "위 사람은 자신의 성격 유형(MBTI) 분석을 성실히 이행하고, "
-                        "스스로의 강점과 이에 맞는 어울리는 직업 세계를 면밀히 탐색하여 "
-                        "미래 지향적 자기 주도 진로 역량을 키웠음을 확인합니다.", 
-                        align="C"
+                    # output
+                    pdf_output = pdf.output()
+                    
+                    st.success("🎉 PDF 리포트가 성공적으로 생성되었습니다!")
+                    
+                    st.download_button(
+                        label="⬇️ PDF 리포트 다운로드",
+                        data=bytes(pdf_output),
+                        file_name=f"{mbti_selected}_진로_리포트_{user_name if user_name else '학습자'}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
                     )
-                    pdf.ln(20)
-                    pdf.cell(0, 10, "MBTI Career Pathfinder 진로교육원", ln=1, align="C")
-                    
-                # Main Report page
-                pdf.build_report()
-                
-                # output
-                pdf_output = pdf.output()
-                
-                st.success("🎉 PDF 리포트가 성공적으로 생성되었습니다!")
-                
-                st.download_button(
-                    label="⬇️ PDF 리포트 다운로드",
-                    data=bytes(pdf_output),
-                    file_name=f"{mbti_selected}_진로_리포트_{user_name if user_name else '학습자'}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-            except Exception as e:
-                st.error(f"PDF 생성에 실패했습니다: {e}")
+                except Exception as e:
+                    st.error(f"PDF 생성에 실패했습니다: {e}")
 
 st.markdown("---")
 st.markdown(f"### 💼 {mbti_selected} 추천 직업 리스트 및 세부 탐색")
